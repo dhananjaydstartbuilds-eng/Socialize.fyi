@@ -1,294 +1,398 @@
 "use client";
 
-import React, { use } from "react";
-import { motion } from "framer-motion";
-import { Zap, BarChart2, Shuffle, ArrowRight } from "lucide-react";
+import React, { useState, useEffect, use } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, Sparkles, RefreshCw, Send, CheckCircle2, Maximize2, Layers } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type Props = {
   params: Promise<{ slug: string }>;
 };
 
-const mockVariants = [
-  { platform: "LINKEDIN", status: "Active", brand: "in", brandColor: "bg-blue-600", content: "The era of centralized social is ending. In 2026, we're seeing the \"Great On-Chain Migration.\" Every professional interaction is becoming a verifiable asset...\n\n#Web3 #FutureOfWork", impressions: "42.8k", ctr: "4.2%", stat1Label: "IMPRESSIONS", stat2Label: "CTR" },
-  { platform: "X ENGINE", status: "Draft", brand: "X", brandColor: "bg-white text-black", content: "\"2026 is the year social media actually becomes yours. Decentralized protocols > Algorithms. The shift is already here. 🧵 \"", impressions: "1.1k", ctr: "HOT", stat1Label: "REPOSTS", stat2Label: "HYPE", isDraft: true },
-  { platform: "INSTAGRAM", status: "Active", brand: "IG", brandColor: "bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500", content: "Aesthetic capture of the decentralized world. #Ownership #CreatorEconomy2026", impressions: "RE-GENERATE VISUAL", isVisual: true },
+// --- Mock Data ---
+const MOCK_HOOKS = [
+  { id: 1, text: "I analyzed 500 SaaS landing pages. 90% fail for this exact reason.", score: 88, breakdown: { curiosity: 18, specificity: 19, outcome: 15, pattern: 18, emotion: 18 }, type: "Curiosity gap", reason: "Hits the curiosity trigger perfectly by hiding the specific reason but providing a high failure percentage." },
+  { id: 2, text: "Stop using minimal UI. It's killing your conversion rates.", score: 72, breakdown: { curiosity: 14, specificity: 12, outcome: 15, pattern: 16, emotion: 15 }, type: "Mistake/warning", reason: "Direct negative outcome warning. Creates immediate urgency to change behavior." },
+  { id: 3, text: "5 design systems that will save you 100+ hours a month.", score: 81, breakdown: { curiosity: 15, specificity: 18, outcome: 20, pattern: 14, emotion: 14 }, type: "Authority/tested insight", reason: "Highly specific outcome paired with a tangible, quantifiable benefit format." },
+  { id: 4, text: "If you don't rebuild your app for spatial computing by 2026, you're dead.", score: 65, breakdown: { curiosity: 16, specificity: 10, outcome: 10, pattern: 15, emotion: 14 }, type: "Contrarian", reason: "Strong polarizing statement that challenges the current dominant paradigm." },
+  { id: 5, text: "Good design is invisible. Great design makes you money.", score: 55, breakdown: { curiosity: 10, specificity: 8, outcome: 15, pattern: 12, emotion: 10 }, type: "Outcome-driven", reason: "Focuses strictly on the end resulting value of the action." }
 ];
+
+const PLATFORMS = ["LinkedIn", "Twitter/X", "Instagram", "Facebook", "Email"];
 
 export default function PostHubPage({ params }: Props) {
   const { slug } = use(params);
+  const router = useRouter();
+  
+  // Parse URL Parameters
+  const [ideaParam, setIdeaParam] = useState<string | null>(null);
+  const [frameworkParam, setFrameworkParam] = useState<string | null>(null);
+  
+  useEffect(() => {
+    // Basic extraction from window in client component since useSearchParams needs suspense boundary in Next 15 sometimes
+    const urlParams = new URLSearchParams(window.location.search);
+    setIdeaParam(urlParams.get("idea"));
+    setFrameworkParam(urlParams.get("framework") || "Contrarian");
+  }, []);
+
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  // Dynamic Hooks Generation based on framework
+  const generateHooks = (framework: string) => {
+    const baseHooks = [
+      { id: 1, text: `I analyzed 500 examples of ${ideaParam || 'this'}. 90% fail for this exact reason.`, score: 88, breakdown: { curiosity: 18, specificity: 19, outcome: 15, pattern: 18, emotion: 18 }, type: "Curiosity gap", reason: "Leverages the unknown. Piques interest without giving away the core lesson." },
+      { id: 2, text: `Stop doing ${ideaParam || 'this'} the normal way. It's killing your conversion rates.`, score: 72, breakdown: { curiosity: 14, specificity: 12, outcome: 15, pattern: 16, emotion: 15 }, type: "Contrarian", reason: "Directly opposes standard wisdom, demanding immediate attention." },
+      { id: 3, text: `5 systems for ${ideaParam || 'this topic'} that will save you 100+ hours a month.`, score: 81, breakdown: { curiosity: 15, specificity: 18, outcome: 20, pattern: 14, emotion: 14 }, type: "Authority/tested insight", reason: "Promises a highly desirable and specific transformation." },
+      { id: 4, text: `If you don't master ${ideaParam || 'this'} by 2026, you're dead.`, score: 65, breakdown: { curiosity: 16, specificity: 10, outcome: 10, pattern: 15, emotion: 14 }, type: "Mistake/warning", reason: "Instills immediate fear of missing out and penalization." },
+      { id: 5, text: `The exact 3-step framework to scale ${ideaParam || 'this process'}.`, score: 92, breakdown: { curiosity: 18, specificity: 20, outcome: 19, pattern: 18, emotion: 17 }, type: framework, reason: "A proven, repeatable structure tailored to the requested focus." }
+    ];
+    
+    // Ensure the top scoring hook matches the requested framework
+    return baseHooks.sort((a,b) => b.score - a.score);
+  };
+
+  const [hooks, setHooks] = useState(MOCK_HOOKS);
+  const [selectedHookId, setSelectedHookId] = useState<number>(1);
+  const [activePlatform, setActivePlatform] = useState(PLATFORMS[0]);
+  const [improving, setImproving] = useState(false);
+  const [content, setContent] = useState("");
+
+  const generatePlatformContent = (platform: string, idea: string, hookText: string) => {
+    switch (platform) {
+      case "LinkedIn":
+        return `${hookText}\n\nMost professionals are stuck in a cycle of generic outputs when it comes to ${idea}.\n\nHere are 3 fundamental shifts you need to make today:\n\n• Stop relying on inherited wisdom.\n• Start auditing your own performance data.\n• Build systems, not just goals.\n\nThe real leverage is in the execution, not the planning.\n\nAgree? Let me know below.\n\n#ProfessionalGrowth #Leadership #Innovation`;
+      case "Twitter/X":
+        return `${hookText}\n\n99% of people get ${idea} completely wrong.\n\nHere's the honest truth:\n1. Stop copying others\n2. Own your data\n3. Build your moat\n\nWhat are you doing to prepare? 👇\n\n#Tech #Growth`;
+      case "Instagram":
+        return `✨ SAVE THIS FOR LATER ✨\n\n${hookText}\n\n${idea} is evolving faster than most people realize right now. If you're not adapting to these changes, you're already missing out on massive growth.\n\nSwipe 👉 to see the breakdown of exactly how to pivot before it's too late.\n\nAre you already implementing this?\nDrop a 🔥 below if you agree!\n\n#marketing #growth #strategy #socialmedia`;
+      case "Facebook":
+        return `Have you noticed how much ${idea} has completely shifted lately?\n\n${hookText}\n\nI was just talking with a client about this today. It feels like we're in a completely new era of digital connection and building businesses together. Those who don't adapt to these new models are going to struggle.\n\nWhat are your thoughts on this? Have you seen this shift in your own day-to-day? Let me know in the comments below! 👇`;
+      case "Email":
+        return `Subject: Re: ${hookText}\n\nHey team,\n\nI wanted to share a quick thought on ${idea} with you today that we need to actively monitor.\n\nToo many people are ignoring the obvious signs, but here is what we need to focus on right now to stay ahead of the curve.\n\nTake a look at the attached data points. If you're seeing the same trends I am, it's clear we need to adapt our strategy before Q4.\n\nLet's chat about this at the next sync. Please bring your thoughts.\n\nBest,\n[Your Name]`;
+      default:
+        return `Generated content for ${platform}...`;
+    }
+  };
+
+  const bestHook = [...hooks].sort((a,b) => b.score - a.score)[0];
+  const selectedHook = hooks.find(h => h.id === selectedHookId);
+
+  useEffect(() => {
+    if (ideaParam && selectedHook) {
+      setContent(generatePlatformContent(activePlatform, ideaParam, selectedHook.text));
+    }
+  }, [activePlatform, selectedHookId, ideaParam]);
+
+  useEffect(() => {
+    if (ideaParam && frameworkParam) {
+      const newHooks = generateHooks(frameworkParam);
+      setHooks(newHooks);
+      setSelectedHookId(newHooks[0].id);
+      
+      // Simulate the AI generation delay
+      const timer = setTimeout(() => {
+        setIsInitialLoading(false);
+      }, 2500);
+      return () => clearTimeout(timer);
+    } else {
+      setIsInitialLoading(false);
+    }
+  }, [ideaParam, frameworkParam]);
+
+  const getScoreColor = (score: number) => {
+    if (score >= 75) return "text-emerald-400 bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]";
+    if (score >= 60) return "text-amber-400 bg-amber-500/10 border-amber-500/30";
+    return "text-rose-400 bg-rose-500/10 border-rose-500/30";
+  };
+  
+  const getProgressColor = (score: number) => {
+    if (score >= 75) return "bg-emerald-400";
+    if (score >= 60) return "bg-amber-400";
+    return "bg-rose-400";
+  };
+
+  const handleImprove = () => {
+    setImproving(true);
+    setTimeout(() => {
+      const improved = {
+        id: Date.now(),
+        text: `I analyzed 500 elite systems for ${ideaParam}. 90% are losing money because of one invisible pixel.`,
+        score: 95,
+        breakdown: { curiosity: 20, specificity: 20, outcome: 20, pattern: 18, emotion: 17 },
+        type: "Mutated Winner",
+        reason: "Sharpened specificity by identifying a single 'invisible pixel' as the culprit. Raised curiosity by withholding what the pixel is."
+      };
+      setHooks([improved, ...hooks.filter(h => h.id !== selectedHookId)]);
+      setSelectedHookId(improved.id);
+      setImproving(false);
+    }, 1500);
+  };
+
+  const handlePublish = () => {
+    // Pass the winning framework and text to the dashboard 
+    router.push("/dashboard");
+  };
+
+  if (isInitialLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#050308] text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/10 via-fuchsia-900/5 to-transparent blur-[120px] pointer-events-none" />
+        
+        <motion.div 
+          animate={{ scale: [1, 1.1, 1], rotate: [0, 90, 180, 270, 360] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+          className="relative w-32 h-32 mb-8"
+        >
+          <div className="absolute inset-0 rounded-full border-t-2 border-fuchsia-500 opacity-50 shadow-[0_0_30px_rgba(217,70,239,0.5)]" />
+          <div className="absolute inset-2 rounded-full border-r-2 border-cyan-500 opacity-70" />
+          <div className="absolute inset-4 rounded-full border-b-2 border-indigo-500 opacity-90" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Sparkles className="w-8 h-8 text-fuchsia-400 animate-pulse" />
+          </div>
+        </motion.div>
+        
+        <motion.h2 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-xl font-bold tracking-[0.15em] uppercase text-white mb-2"
+        >
+          Analyzing Data
+        </motion.h2>
+        
+        <motion.div className="flex flex-col items-center gap-2">
+          <p className="text-slate-500 text-sm font-mono tracking-widest uppercase animate-pulse">
+            Targeting Framework: <span className="text-fuchsia-400">{frameworkParam}</span>
+          </p>
+          <p className="text-slate-600 text-[10px] font-mono tracking-[0.3em] uppercase">
+            Calculating Performance Scores...
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#08050d] text-slate-200 font-sans selection:bg-cyan-500/30 overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-[#050308] text-slate-200 font-sans selection:bg-fuchsia-500/30 overflow-x-hidden">
       
+      {/* Background Abstract */}
+      <div className="absolute top-0 right-0 w-[800px] h-[600px] bg-gradient-to-b from-indigo-900/20 via-fuchsia-900/10 to-transparent blur-[120px] pointer-events-none" />
+
       {/* Top Header */}
-      <header className="w-full px-8 py-6 flex flex-col sm:flex-row items-center justify-between z-20 relative">
-        <div className="flex flex-col mb-4 sm:mb-0">
-           <h1 className="text-2xl font-bold tracking-[0.2em] uppercase text-white font-mono flex items-center gap-3">
-             <span className="bg-white text-black w-2 h-6 inline-block" />
-             LIVING POST HUB
-           </h1>
-           <span className="text-[10px] uppercase font-mono tracking-widest text-slate-500 mt-1 ml-5">
-             Unified Orchestration Engine v4.2.0
-           </span>
+      <header className="w-full px-8 py-5 flex items-center justify-between z-20 border-b border-white/5 bg-[#050308]/80 backdrop-blur-md sticky top-0">
+        <div className="flex items-center gap-6">
+          <Link href="/dashboard" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors border border-white/10 group">
+             <ArrowLeft className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
+          </Link>
+          <div>
+            <h1 className="text-[14px] font-bold tracking-[0.15em] uppercase text-white font-mono flex items-center gap-2">
+              Draft Space <span className="px-2 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 text-[9px] border border-fuchsia-500/20">Target: {frameworkParam}</span>
+            </h1>
+            <p className="text-[10px] uppercase font-mono tracking-widest text-slate-500 mt-1 truncate max-w-[300px]">
+              IDEA: {ideaParam || slug}
+            </p>
+          </div>
         </div>
         
         <div className="flex items-center gap-4">
-           <button className="px-6 py-2 rounded-full border border-white/20 text-[11px] text-white tracking-[0.1em] hover:bg-white/10 transition-colors uppercase font-bold">
-             RE-SYNC ALL
-           </button>
-           <div className="w-10 h-10 rounded-full border-2 border-cyan-500 overflow-hidden cursor-pointer">
-             <div className="w-full h-full bg-gradient-to-tr from-cyan-400 to-fuchsia-500 flex items-center justify-center">
-                <div className="w-full h-full bg-slate-800" />
+           {selectedHook && (
+             <div className="hidden md:flex items-center gap-3 px-4 py-2 rounded-full border border-white/10 bg-white/5">
+                <span className="text-[10px] tracking-widest uppercase font-bold text-slate-500">Active Score</span>
+                <span className={`text-[13px] font-bold ${getScoreColor(selectedHook.score).split(' ')[0]}`}>
+                  {selectedHook.score}/100
+                </span>
              </div>
-           </div>
+           )}
+           <button 
+             onClick={handlePublish}
+             className="px-8 py-3 rounded-full bg-white text-black font-bold text-[12px] tracking-[0.1em] hover:bg-slate-200 transition-colors uppercase shadow-[0_0_20px_rgba(255,255,255,0.15)] flex items-center gap-2"
+           >
+             Publish & Track <Send className="w-4 h-4 ml-1" />
+           </button>
         </div>
       </header>
 
-      <main className="flex-1 max-w-[1400px] w-full mx-auto px-6 pb-12 z-10 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8 relative">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-6 py-8 z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 relative">
         
-        {/* Dynamic Abstract Background inside main container */}
-        <div className="absolute top-0 right-0 w-[800px] h-[600px] bg-gradient-to-b from-indigo-900/10 via-purple-900/5 to-transparent blur-[100px] pointer-events-none" />
+        {/* LEFT PANEL: HOOK ENGINE */}
+        <section className="flex flex-col h-full">
+           <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-white flex items-center gap-3 tracking-tight">
+                 <Sparkles className="w-5 h-5 text-fuchsia-400" />
+                 Hook Engine
+              </h2>
+              <span className="text-[10px] tracking-[0.2em] font-bold uppercase text-slate-500 flex items-center gap-2">
+                 <span className="w-2 h-2 rounded-full bg-fuchsia-500 animate-pulse shadow-[0_0_8px_rgba(217,70,239,0.6)]" />
+                 Live Analysis
+              </span>
+           </div>
 
-         {/* Left Sidebar - Boost Tools & Vitals */}
-         <aside className="space-y-6 order-2 lg:order-1 mt-6">
-            
-            {/* Boost Panel */}
-            <div className="p-1 rounded-[1.5rem] bg-[#0c0814] border border-white/5 space-y-4 pt-6">
-               <h3 className="text-[11px] font-bold tracking-[0.2em] uppercase text-fuchsia-500 mb-4 px-6">Boost Tools</h3>
-               
-               <div className="space-y-2 px-4 pb-4">
-                 <BoostCard 
-                   icon={<Zap className="w-4 h-4 text-fuchsia-400" />} 
-                   title="Viral Resonance" 
-                   desc="Predictive trend injection"
-                   iconBg="bg-fuchsia-500/10"
-                 />
-                 <BoostCard 
-                   icon={<BarChart2 className="w-4 h-4 text-cyan-400" />} 
-                   title="Sentiment Shift" 
-                   desc="Real-time audience mood"
-                   iconBg="bg-cyan-500/10"
-                 />
-                 <BoostCard 
-                   icon={<Shuffle className="w-4 h-4 text-cyan-400" />} 
-                   title="Smart Adapt" 
-                   desc="Auto-variant generation"
-                   iconBg="bg-cyan-500/20"
-                   containerBg="bg-cyan-500/10 border-cyan-500/30"
-                   titleCol="text-cyan-400"
-                   descCol="text-cyan-400/70"
-                 />
-               </div>
-            </div>
+           <div className="space-y-4 overflow-y-auto pr-2 pb-10" style={{ maxHeight: 'calc(100vh - 180px)' }}>
+              <AnimatePresence>
+                {hooks.map((hook, i) => {
+                  const isSelected = selectedHookId === hook.id;
+                  const isBest = hook.id === bestHook.id;
+                  
+                  return (
+                    <motion.div 
+                      key={hook.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.3, delay: i * 0.05 }}
+                      onClick={() => setSelectedHookId(hook.id)}
+                      className={`relative p-5 rounded-2xl border cursor-pointer transition-all duration-300 ${
+                        isSelected 
+                          ? 'border-fuchsia-500/50 bg-fuchsia-500/[0.03] shadow-[0_0_30px_-5px_rgba(217,70,239,0.15)]' 
+                          : 'border-white/5 bg-[#0a0710] hover:border-white/20'
+                      }`}
+                    >
+                       {isBest && !isSelected && (
+                         <div className="absolute -top-3 -right-2 px-3 py-1 bg-emerald-500 text-black text-[9px] font-bold tracking-widest uppercase rounded shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+                           Top Performer
+                         </div>
+                       )}
+                       
+                       {isSelected && (
+                         <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 to-transparent pointer-events-none rounded-2xl" />
+                       )}
 
-            {/* Network Vitals panel */}
-            <div className="p-6 rounded-[1.5rem] bg-[#0c0814] border border-white/5 space-y-6">
-                <h3 className="text-[11px] font-bold tracking-[0.2em] uppercase text-slate-500">Network Vitals</h3>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl bg-[#130f1c] border border-white/5">
-                     <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Latency</p>
-                     <p className="text-xl font-mono text-white">12ms</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-[#130f1c] border border-white/5">
-                     <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Nodes</p>
-                     <p className="text-xl font-mono text-white">418</p>
-                  </div>
-                </div>
+                       <div className="flex gap-4 relative z-10">
+                          {/* Score Badge */}
+                          <div className={`w-14 h-14 rounded-xl flex flex-col items-center justify-center shrink-0 border ${getScoreColor(hook.score)}`}>
+                             <span className="text-xl font-bold leading-none">{hook.score}</span>
+                             <span className="text-[8px] uppercase tracking-widest opacity-80 mt-0.5">/100</span>
+                          </div>
 
-                <div className="p-4 rounded-xl bg-[#130f1c] border border-white/5">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-2">Global Reach</p>
-                  <p className="text-2xl font-bold text-cyan-400 mb-3">1.2M+</p>
-                  <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                     <motion.div 
-                       initial={{ width: 0 }}
-                       animate={{ width: "80%" }}
-                       transition={{ duration: 1.5, ease: "easeOut" }}
-                       className="h-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]"
-                     />
-                  </div>
-                </div>
-            </div>
-         </aside>
+                          <div className="flex-1">
+                             <div className="flex items-center justify-between mb-1.5">
+                               <span className="text-[10px] tracking-widest uppercase font-mono text-slate-500">
+                                 {hook.type}
+                               </span>
+                               {isSelected && <CheckCircle2 className="w-4 h-4 text-fuchsia-400" />}
+                             </div>
+                             <p className={`text-sm md:text-base font-semibold leading-relaxed ${isSelected ? 'text-white' : 'text-slate-300'}`}>
+                               "{hook.text}"
+                             </p>
+                          </div>
+                       </div>
 
-         {/* Right Main Content */}
-         <div className="order-1 lg:order-2 flex flex-col">
-            
-            {/* Master Concept Header Card */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="relative p-10 rounded-[1.5rem] mb-6 overflow-hidden border border-white/5"
-            >
-               {/* Gradients */}
-               <div className="absolute inset-0 bg-gradient-to-r from-[#172535] to-[#25122b]" />
-               
-               <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
-                 <div className="max-w-2xl">
-                    <div className="inline-block px-3 py-1 bg-transparent border border-[#16606a] text-[#4ed9db] tracking-[0.1em] text-[10px] uppercase font-bold rounded mb-6">
-                       MASTER CONCEPT
-                    </div>
-                    <h2 className="text-3xl font-bold text-white mb-4 leading-tight tracking-tight">
-                       Decentralized Social Ecosystems: The 2026 Shift in Creator Ownership
-                    </h2>
-                    <p className="text-[#a5abb6] text-sm leading-relaxed max-w-[90%]">
-                       Exploring the convergence of sovereign identity and community-owned platforms. How creators are moving away from centralized algorithms to direct-to-onchain engagement models.
-                    </p>
+                       {/* Expanded Breakdown for Selected Hook */}
+                        <AnimatePresence>
+                          {isSelected && (
+                            <motion.div 
+                             initial={{ opacity: 0, height: 0 }}
+                             animate={{ opacity: 1, height: 'auto' }}
+                             exit={{ opacity: 0, height: 0 }}
+                             className="overflow-hidden"
+                           >
+                              <div className="mt-6 pt-5 border-t border-white/5 space-y-3">
+                                <div className="flex items-end justify-between mb-4">
+                                  <h4 className="text-[11px] font-bold tracking-[0.15em] uppercase text-slate-400">Score Breakdown</h4>
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); handleImprove(); }}
+                                    disabled={improving}
+                                    className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:to-purple-500 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 shadow-[0_0_15px_rgba(168,85,247,0.4)] hover:shadow-[0_0_25px_rgba(168,85,247,0.6)] transition-all disabled:opacity-50"
+                                  >
+                                    {improving ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Maximize2 className="w-3 h-3" />}
+                                    Mutate Hook
+                                  </button>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                                  {Object.entries(hook.breakdown).map(([key, val]) => (
+                                    <div key={key}>
+                                      <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+                                        <span>{key}</span>
+                                        <span className="text-white">{val}/20</span>
+                                      </div>
+                                      <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                        <div className={`h-full rounded-full ${getProgressColor(hook.score)}`} style={{ width: `${(val/20)*100}%` }} />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                <div className="mt-6 pt-4 border-t border-white/5">
+                                  <h4 className="text-[10px] font-bold tracking-[0.15em] uppercase text-slate-500 mb-2">Reason (AI Analysis)</h4>
+                                  <p className="text-xs text-slate-300 leading-relaxed font-medium bg-white/[0.02] p-3 rounded-lg border border-white/5">
+                                    {(hook as any).reason || "High completion of intended criteria. Connects deeply with outcome-based triggers and demands attention through specific data points."}
+                                  </p>
+                                </div>
+                              </div>
+                           </motion.div>
+                         )}
+                       </AnimatePresence>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+           </div>
+        </section>
+
+        {/* RIGHT PANEL: CONTENT ENGINE */}
+        <section className="flex flex-col h-full mt-8 lg:mt-0">
+           <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-white flex items-center gap-3 tracking-tight">
+                 <Layers className="w-5 h-5 text-indigo-400" />
+                 Content Matrix
+              </h2>
+           </div>
+
+           <div className="flex flex-col flex-1 bg-[#0a0710] border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl relative">
+              
+              {/* Tabs */}
+              <div className="flex overflow-x-auto no-scrollbar border-b border-white/5 hide-scrollbar">
+                 {PLATFORMS.map(platform => (
+                    <button
+                      key={platform}
+                      onClick={() => setActivePlatform(platform)}
+                      className={`px-6 py-5 text-[11px] font-bold tracking-[0.1em] uppercase whitespace-nowrap border-b-2 transition-all ${
+                        activePlatform === platform 
+                          ? 'text-white border-indigo-500 bg-white/[0.02]' 
+                          : 'text-slate-500 border-transparent hover:text-slate-300 hover:bg-white/[0.01]'
+                      }`}
+                    >
+                      {platform}
+                    </button>
+                 ))}
+              </div>
+
+              {/* Editor Area */}
+              <div className="flex-1 p-6 lg:p-8 flex flex-col relative group">
+                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent pointer-events-none opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                 
+                 {/* Hook preview pinned to top */}
+                 <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 mb-6">
+                   <p className="text-[10px] font-bold uppercase tracking-widest text-[#a5abb6] mb-2 flex items-center justify-between">
+                     Selected Hook <span className="text-fuchsia-400">LOCKED</span>
+                   </p>
+                   <p className="text-slate-200 font-semibold leading-relaxed">
+                     "{selectedHook?.text}"
+                   </p>
                  </div>
 
-                 <div className="flex items-center gap-6 flex-shrink-0 mt-4 md:mt-0">
-                    <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 text-center flex flex-col justify-center min-w-[100px] backdrop-blur-md">
-                       <span className="text-[10px] tracking-widest text-[#a5abb6] uppercase mb-1">AI SCORE</span>
-                       <span className="text-3xl font-bold text-white tracking-widest leading-none">98.4</span>
-                    </div>
+                 <textarea
+                   value={content}
+                   onChange={(e) => setContent(e.target.value)}
+                   className="flex-1 w-full bg-transparent resize-none outline-none text-[15px] leading-[1.8] text-slate-300 font-medium placeholder:text-slate-600 focus:ring-0 relative z-10"
+                   placeholder={`AI rewrites for ${activePlatform} will appear here...`}
+                 />
 
-                    <button className="h-full bg-white text-black rounded-xl px-6 py-4 flex items-center justify-center gap-3 font-bold text-[13px] tracking-widest hover:bg-slate-200 transition-colors whitespace-nowrap">
-                       EDIT MASTER <span className="text-lg leading-none">→</span>
+                 <div className="mt-6 flex items-center justify-between border-t border-white/5 pt-6">
+                    <span className="text-[11px] font-mono tracking-widest uppercase text-slate-500">
+                      {content.length} / 2200 Chars
+                    </span>
+                    <button className="px-6 py-2 rounded-lg bg-white/5 text-xs font-bold uppercase tracking-widest text-slate-300 hover:bg-white/10 hover:text-white transition-colors border border-white/10">
+                      Copy Content
                     </button>
                  </div>
-               </div>
-            </motion.div>
+              </div>
 
-            {/* Platform Variants Grid (The "Engines") */}
-            <div className="grid md:grid-cols-3 gap-6 flex-1 items-stretch">
-               {mockVariants.map((variant, i) => (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 + (i * 0.1) }}
-                    key={variant.platform}
-                    className="flex flex-col rounded-[1.5rem] bg-[#0c0814] border border-white/5 relative overflow-hidden h-full group pb-6"
-                  >
-                     {/* Platform Header */}
-                     <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                           <div className={`w-6 h-6 rounded flex items-center justify-center font-bold text-white text-[10px] tracking-wide ${variant.brandColor}`}>
-                             {variant.brand}
-                           </div>
-                           <span className="font-mono text-[11px] text-slate-300 tracking-[0.1em]">{variant.platform}</span>
-                        </div>
-                        
-                        {/* Status Pulse Indicator */}
-                        <div className="relative flex items-center justify-center w-2 h-2">
-                           <span className={`w-1.5 h-1.5 rounded-full ${variant.status === 'Active' ? 'bg-[#2dd4bf]' : 'bg-[#eab308]'}`} />
-                        </div>
-                     </div>
+           </div>
+        </section>
 
-                     {/* Content Body */}
-                     <div className="p-6 flex-1 flex flex-col justify-between">
-                        <div className="mb-6">
-                           {variant.isVisual ? (
-                              <div className="w-full h-32 rounded-lg bg-[#536B73] border border-white/10 flex items-center justify-center relative overflow-hidden mt-6 mb-4 relative cursor-pointer group-hover:border-cyan-500/30 transition-colors">
-                                 <div className="w-16 h-20 border-2 border-[#b59868] absolute shadow-lg" />
-                                 <span className="text-[9px] uppercase font-bold tracking-[0.15em] text-[#4ed9db] z-10 px-3 py-2 bg-[#2a3c42] border border-[#4ed9db] shadow-[0_0_15px_rgba(78,217,219,0.3)]">
-                                   {variant.impressions}
-                                 </span>
-                              </div>
-                           ) : (
-                              <p className={`text-[13px] leading-relaxed mb-6 font-medium ${variant.isDraft ? 'text-[#a5abb6] italic' : 'text-slate-200'} whitespace-pre-wrap`}>
-                                 {variant.content.split('\n').map((line, idx) => {
-                                    if (line.includes('#')) {
-                                       return <span key={idx} className="block text-[#4ed9db] mt-2">{line}</span>
-                                    }
-                                    return <span key={idx}>{line}<br/></span>
-                                 })}
-                              </p>
-                           )}
-                           
-                           {variant.isVisual && (
-                              <p className="text-[12px] text-[#a5abb6] font-medium leading-relaxed">{variant.content}</p>
-                           )}
-                        </div>
-
-                        {/* Cards logic */}
-                        {!variant.isVisual && (
-                           <div className="grid grid-cols-2 gap-4 mt-auto">
-                              <div className="p-4 rounded-[1.2rem] bg-[#141018] border border-white/[0.02] flex flex-col items-center justify-center">
-                                 <span className="text-[9px] uppercase tracking-[0.15em] text-[#6b7280] mb-2">{variant.stat1Label}</span>
-                                 <span className="text-xl font-bold tracking-tight text-[#d1d5db]">{variant.impressions}</span>
-                              </div>
-                               <div className="p-4 rounded-[1.2rem] bg-[#141018] border border-white/[0.02] flex flex-col items-center justify-center">
-                                 <span className="text-[9px] uppercase tracking-[0.15em] text-[#6b7280] mb-2">{variant.stat2Label}</span>
-                                 <span className="text-xl font-bold tracking-tight text-[#d1d5db]">{variant.ctr}</span>
-                              </div>
-                           </div>
-                        )}
-                     </div>
-
-                     {/* Footer Actions */}
-                     <div className="px-6 flex gap-3 mt-auto w-full">
-                        <button className="flex-1 py-3.5 rounded-xl bg-transparent border border-white/5 text-[10px] font-bold tracking-[0.1em] uppercase text-[#a5abb6] hover:text-white transition-colors">
-                           PREVIEW
-                        </button>
-                        <button className="flex-1 py-3.5 rounded-xl bg-[#0d3439] border border-transparent text-[10px] font-bold tracking-[0.1em] uppercase text-[#4ed9db] hover:bg-[#134950] transition-colors">
-                           UPDATE
-                        </button>
-                     </div>
-                  </motion.div>
-               ))}
-            </div>
-
-            {/* NEW: Hub Activity Feed */}
-            <div className="mt-12 p-8 rounded-[1.5rem] bg-[#0c0814] border border-white/5 w-full">
-               <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-[11px] font-bold tracking-[0.2em] uppercase text-slate-500">Activity Ledger</h3>
-                  <button className="text-[10px] text-cyan-400 tracking-widest uppercase hover:underline">View Full Logs</button>
-               </div>
-               
-               <div className="relative border-l border-white/10 ml-4 space-y-10 pb-4">
-                  
-                  {/* Item 1 */}
-                  <div className="relative pl-8">
-                     <span className="absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                     </span>
-                     <p className="text-[10px] font-mono text-slate-500 tracking-wider mb-1">OCT 24, 14:32</p>
-                     <p className="text-sm font-semibold text-slate-200">Outbound linked confirmed</p>
-                     <p className="text-xs text-slate-400 mt-1">Status changed to <span className="text-emerald-400">Active</span> for LinkedIn variant.</p>
-                  </div>
-
-                  {/* Item 2 */}
-                  <div className="relative pl-8">
-                     <span className="absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-fuchsia-500/20 border border-fuchsia-500/50">
-                        <Zap className="w-3 h-3 text-fuchsia-400" />
-                     </span>
-                     <p className="text-[10px] font-mono text-slate-500 tracking-wider mb-1">OCT 24, 09:12</p>
-                     <p className="text-sm font-semibold text-slate-200">Boost Action Generated</p>
-                     <p className="text-xs text-slate-400 mt-1 italic">"Viral Resonance" hooks generated by AI and saved to draft.</p>
-                  </div>
-
-                  {/* Item 3 */}
-                  <div className="relative pl-8">
-                     <span className="absolute -left-3 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-[#1e293b] border border-[#334155]">
-                        <span className="w-2 h-2 rounded-full bg-slate-300" />
-                     </span>
-                     <p className="text-[10px] font-mono text-slate-500 tracking-wider mb-1">OCT 22, 18:05</p>
-                     <p className="text-sm font-semibold text-slate-200">Master Concept Finalized</p>
-                     <p className="text-xs text-slate-400 mt-1">Initial variants orchestrated and awaiting review.</p>
-                  </div>
-
-               </div>
-            </div>
-
-         </div>
       </main>
     </div>
-  );
-}
-
-function BoostCard({ icon, title, desc, iconBg, containerBg = "bg-transparent border border-transparent", titleCol = "text-white", descCol = "text-[#6b7280]" }: any) {
-  return (
-    <motion.div 
-      whileHover={{ x: 3 }}
-      className={`p-3 rounded-2xl flex items-center gap-4 cursor-pointer hover:bg-white/[0.03] transition-all ${containerBg}`}
-    >
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${iconBg}`}>
-        {icon}
-      </div>
-      <div>
-        <h4 className={`text-[13px] font-bold ${titleCol}`}>{title}</h4>
-        <p className={`text-[10px] ${descCol}`}>{desc}</p>
-      </div>
-    </motion.div>
   );
 }

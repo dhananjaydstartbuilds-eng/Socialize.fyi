@@ -52,7 +52,7 @@ export default function HomePage() {
         >
           <div className="flex items-center gap-2 font-bold text-lg tracking-tight">
             <Sparkles className="w-5 h-5 text-purple-400" />
-            <span>Socialize<span className="text-purple-400">.fyi</span></span>
+              <span >Socialize<span className="text-purple-400">.fyi</span></span> 
           </div>
           <div className="h-4 w-px bg-white/20 hidden md:block" />
           <div className="hidden md:flex gap-6 text-sm font-medium text-slate-300">
