@@ -4,9 +4,11 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { 
   Plus, LayoutDashboard, Send, RefreshCw, BarChart2,
-  TrendingUp, Activity, CheckCircle2, ChevronDown, Zap
+  TrendingUp, Activity, CheckCircle2, ChevronDown, Zap, LogOut
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 
 const PERFORMANCE_METRICS = [
   { title: "Avg. Engagement Rate", value: "8.4%", trend: "+2.1%", color: "text-emerald-400" },
@@ -29,8 +31,24 @@ const MUTATED_VERSIONS = [
 ];
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [activeNav, setActiveNav] = useState("Performance Loop");
   const [activeFilter, setActiveFilter] = useState("All");
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(res => res.json())
+      .then(data => {
+        if (data.email) setUserEmail(data.email);
+      });
+  }, []);
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    toast.info("You have successfully logged out");
+    router.push('/');
+  };
 
   const FILTER_OPTIONS = [
     "All", "Contrarian", "Curiosity gap", "Outcome-driven", 
@@ -100,6 +118,29 @@ export default function DashboardPage() {
              </button>
            ))}
         </nav>
+
+        {/* User Profile & Logout Panel */}
+        <div className="mt-auto p-4 mb-4 mx-3 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-4 relative overflow-hidden group">
+           <div className="absolute inset-0 bg-gradient-to-t from-fuchsia-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+           <div className="relative z-10 flex items-center justify-between">
+              <div className="flex items-center gap-3 overflow-hidden">
+                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex flex-shrink-0 items-center justify-center font-bold text-lg text-white shadow-[0_0_15px_rgba(217,70,239,0.3)] border border-white/10">
+                   {userEmail ? userEmail.charAt(0).toUpperCase() : '?'}
+                 </div>
+                 <div className="flex flex-col min-w-0 pr-2">
+                   <span className="text-white text-sm font-semibold truncate block max-w-[120px]">{userEmail || "Loading..."}</span>
+                   <span className="text-[10px] text-fuchsia-400 font-bold uppercase tracking-widest mt-0.5">Pro User</span>
+                 </div>
+              </div>
+              <button 
+                onClick={handleLogout}
+                className="w-10 h-10 flex flex-shrink-0 items-center justify-center rounded-xl bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-400 border border-white/5 hover:border-red-500/30 transition-all focus:outline-none"
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+           </div>
+        </div>
       </aside>
 
       {/* Main Content */}

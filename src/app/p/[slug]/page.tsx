@@ -38,63 +38,78 @@ export default function PostHubPage({ params }: Props) {
 
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  // Dynamic Hooks Generation based on framework
-  const generateHooks = (framework: string) => {
-    const baseHooks = [
-      { id: 1, text: `I analyzed 500 examples of ${ideaParam || 'this'}. 90% fail for this exact reason.`, score: 88, breakdown: { curiosity: 18, specificity: 19, outcome: 15, pattern: 18, emotion: 18 }, type: "Curiosity gap", reason: "Leverages the unknown. Piques interest without giving away the core lesson." },
-      { id: 2, text: `Stop doing ${ideaParam || 'this'} the normal way. It's killing your conversion rates.`, score: 72, breakdown: { curiosity: 14, specificity: 12, outcome: 15, pattern: 16, emotion: 15 }, type: "Contrarian", reason: "Directly opposes standard wisdom, demanding immediate attention." },
-      { id: 3, text: `5 systems for ${ideaParam || 'this topic'} that will save you 100+ hours a month.`, score: 81, breakdown: { curiosity: 15, specificity: 18, outcome: 20, pattern: 14, emotion: 14 }, type: "Authority/tested insight", reason: "Promises a highly desirable and specific transformation." },
-      { id: 4, text: `If you don't master ${ideaParam || 'this'} by 2026, you're dead.`, score: 65, breakdown: { curiosity: 16, specificity: 10, outcome: 10, pattern: 15, emotion: 14 }, type: "Mistake/warning", reason: "Instills immediate fear of missing out and penalization." },
-      { id: 5, text: `The exact 3-step framework to scale ${ideaParam || 'this process'}.`, score: 92, breakdown: { curiosity: 18, specificity: 20, outcome: 19, pattern: 18, emotion: 17 }, type: framework, reason: "A proven, repeatable structure tailored to the requested focus." }
-    ];
-    
-    // Ensure the top scoring hook matches the requested framework
-    return baseHooks.sort((a,b) => b.score - a.score);
-  };
+  // Hook generation is handled via the API in the useEffect below
 
   const [hooks, setHooks] = useState(MOCK_HOOKS);
   const [selectedHookId, setSelectedHookId] = useState<number>(1);
   const [activePlatform, setActivePlatform] = useState(PLATFORMS[0]);
   const [improving, setImproving] = useState(false);
   const [content, setContent] = useState("");
-
-  const generatePlatformContent = (platform: string, idea: string, hookText: string) => {
-    switch (platform) {
-      case "LinkedIn":
-        return `${hookText}\n\nMost professionals are stuck in a cycle of generic outputs when it comes to ${idea}.\n\nHere are 3 fundamental shifts you need to make today:\n\n• Stop relying on inherited wisdom.\n• Start auditing your own performance data.\n• Build systems, not just goals.\n\nThe real leverage is in the execution, not the planning.\n\nAgree? Let me know below.\n\n#ProfessionalGrowth #Leadership #Innovation`;
-      case "Twitter/X":
-        return `${hookText}\n\n99% of people get ${idea} completely wrong.\n\nHere's the honest truth:\n1. Stop copying others\n2. Own your data\n3. Build your moat\n\nWhat are you doing to prepare? 👇\n\n#Tech #Growth`;
-      case "Instagram":
-        return `✨ SAVE THIS FOR LATER ✨\n\n${hookText}\n\n${idea} is evolving faster than most people realize right now. If you're not adapting to these changes, you're already missing out on massive growth.\n\nSwipe 👉 to see the breakdown of exactly how to pivot before it's too late.\n\nAre you already implementing this?\nDrop a 🔥 below if you agree!\n\n#marketing #growth #strategy #socialmedia`;
-      case "Facebook":
-        return `Have you noticed how much ${idea} has completely shifted lately?\n\n${hookText}\n\nI was just talking with a client about this today. It feels like we're in a completely new era of digital connection and building businesses together. Those who don't adapt to these new models are going to struggle.\n\nWhat are your thoughts on this? Have you seen this shift in your own day-to-day? Let me know in the comments below! 👇`;
-      case "Email":
-        return `Subject: Re: ${hookText}\n\nHey team,\n\nI wanted to share a quick thought on ${idea} with you today that we need to actively monitor.\n\nToo many people are ignoring the obvious signs, but here is what we need to focus on right now to stay ahead of the curve.\n\nTake a look at the attached data points. If you're seeing the same trends I am, it's clear we need to adapt our strategy before Q4.\n\nLet's chat about this at the next sync. Please bring your thoughts.\n\nBest,\n[Your Name]`;
-      default:
-        return `Generated content for ${platform}...`;
-    }
-  };
+  const [generatingContent, setGeneratingContent] = useState(false);
 
   const bestHook = [...hooks].sort((a,b) => b.score - a.score)[0];
   const selectedHook = hooks.find(h => h.id === selectedHookId);
 
   useEffect(() => {
-    if (ideaParam && selectedHook) {
-      setContent(generatePlatformContent(activePlatform, ideaParam, selectedHook.text));
+    let active = true;
+    if (ideaParam && selectedHook && activePlatform) {
+      async function fetchContent() {
+        setGeneratingContent(true);
+        setContent("Generating AI post...");
+        try {
+          const res = await fetch("/api/generate-content", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+              idea: ideaParam, 
+              hookText: selectedHook?.text || "", 
+              platform: activePlatform 
+            })
+          });
+          const json = await res.json();
+          if (active && json.success && json.data) {
+            setContent(json.data);
+          } else if (active && !json.success) {
+            setContent("Failed to generate content.");
+          }
+        } catch (err) {
+          console.error("Failed to generate content:", err);
+          if (active) setContent("Failed to generate content.");
+        } finally {
+          if (active) setGeneratingContent(false);
+        }
+      }
+      fetchContent();
+      return () => { active = false; };
     }
   }, [activePlatform, selectedHookId, ideaParam]);
 
   useEffect(() => {
+    let active = true;
     if (ideaParam && frameworkParam) {
-      const newHooks = generateHooks(frameworkParam);
-      setHooks(newHooks);
-      setSelectedHookId(newHooks[0].id);
-      
-      // Simulate the AI generation delay
-      const timer = setTimeout(() => {
-        setIsInitialLoading(false);
-      }, 2500);
-      return () => clearTimeout(timer);
+      async function fetchHooks() {
+        try {
+          const res = await fetch("/api/generate-hooks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idea: ideaParam, framework: frameworkParam, action: "generate" })
+          });
+          const json = await res.json();
+          if (active && json.success && json.data && json.data.length > 0) {
+            const formattedHooks = json.data.map((h: any, i: number) => ({ ...h, id: Date.now() + i }));
+            // Ensure the top scoring hook is first
+            formattedHooks.sort((a: any, b: any) => b.score - a.score);
+            setHooks(formattedHooks);
+            setSelectedHookId(formattedHooks[0].id);
+          }
+        } catch (err) {
+          console.error("Failed to generate hooks:", err);
+        } finally {
+          if (active) setIsInitialLoading(false);
+        }
+      }
+      fetchHooks();
+      return () => { active = false; };
     } else {
       setIsInitialLoading(false);
     }
@@ -112,21 +127,35 @@ export default function PostHubPage({ params }: Props) {
     return "bg-rose-400";
   };
 
-  const handleImprove = () => {
+  const handleImprove = async () => {
+    if (!selectedHook) return;
     setImproving(true);
-    setTimeout(() => {
-      const improved = {
-        id: Date.now(),
-        text: `I analyzed 500 elite systems for ${ideaParam}. 90% are losing money because of one invisible pixel.`,
-        score: 95,
-        breakdown: { curiosity: 20, specificity: 20, outcome: 20, pattern: 18, emotion: 17 },
-        type: "Mutated Winner",
-        reason: "Sharpened specificity by identifying a single 'invisible pixel' as the culprit. Raised curiosity by withholding what the pixel is."
-      };
-      setHooks([improved, ...hooks.filter(h => h.id !== selectedHookId)]);
-      setSelectedHookId(improved.id);
+    try {
+      const res = await fetch("/api/generate-hooks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          idea: ideaParam, 
+          framework: frameworkParam, 
+          action: "mutate",
+          originalHook: selectedHook.text,
+          originalScore: selectedHook.breakdown
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const improved = {
+          ...data.data,
+          id: Date.now()
+        };
+        setHooks([improved, ...hooks.filter(h => h.id !== selectedHookId)]);
+        setSelectedHookId(improved.id);
+      }
+    } catch (err) {
+      console.error("Mutation failed:", err);
+    } finally {
       setImproving(false);
-    }, 1500);
+    }
   };
 
   const handlePublish = () => {

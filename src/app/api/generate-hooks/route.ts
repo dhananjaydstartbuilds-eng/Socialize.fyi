@@ -1,65 +1,53 @@
-import { NextResponse } from 'next/dist/server/web/spec-extension/response';
+import { NextResponse } from 'next/server';
+import Groq from 'groq-sdk';
 
-// This is a placeholder for the actual LLM integration.
-// Currently it returns simulated data using the system prompt provided.
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 const SYSTEM_PROMPT = `
 🧪 Hook Generation + Scoring Prompt
 
 You are a high-performance social media strategist. Your job is to generate and evaluate hooks that maximize Social Media engagement, interaction, views and re-posts.
 
-INPUT:
-[Insert post topic or content]
-
-STEP 1 — Generate 5 hook variations using different angles:
+Generate 5 hook variations using different angles based on the user's input. The standard angles are:
 - Contrarian
 - Curiosity gap
 - Outcome-driven
 - Mistake/warning
 - Authority/tested insight
 
-STEP 2 — Score each hook out of 100 using:
-1. Curiosity (0–20)
-2. Specificity (0–20)
-3. Outcome clarity (0–20)
-4. Pattern interrupt (0–20)
-5. Emotional trigger (0–20)
+If the user provides a specific preferred framework/angle, ensure one of the hooks matches that angle and is heavily optimized.
 
-STEP 3 — Display results in this format:
-Hook:
-Score: X/100
-Breakdown:
-- Curiosity: X
-- Specificity: X
-- Outcome: X
-- Pattern Interrupt: X
-- Emotion: X
-Reason:
-[Why this works or fails]
+Score each hook out of 100 using:
+1. Curiosity (0-20)
+2. Specificity (0-20)
+3. Outcome clarity (0-20)
+4. Pattern interrupt (0-20)
+5. Emotional trigger (0-20)
 
-STEP 4 — Take the BEST hook and generate 3 improved versions.
-Each improved version must:
-- Increase curiosity
-- Sharpen specificity
-- Strengthen emotional pull
-- Be more scroll-stopping
+You MUST return a pure JSON array containing 5 objects. Do not include any markdown escaping like \`\`\`json. Output ONLY the JSON array.
 
-Return only high-performing hooks (70+ score).
+Strict JSON format to follow:
+[
+  {
+    "type": "Contrarian",
+    "text": "The hook itself...",
+    "score": 85,
+    "breakdown": {
+      "curiosity": 15,
+      "specificity": 18,
+      "outcome": 17,
+      "pattern": 20,
+      "emotion": 15
+    },
+    "reason": "Why this works..."
+  }
+]
 `;
 
 const MUTATION_PROMPT = `
 🔥 Hook Mutation Prompt
 
-You are optimizing a high-performing hook.
-
-Original Hook:
-[Insert hook]
-
-Score:
-[Insert score breakdown]
-
-Your goal:
-Increase this hook’s performance score to 85+.
+You are optimizing a high-performing hook. Increase this hook’s performance score to 85+.
 
 Do this by:
 - Increasing curiosity gap
@@ -67,11 +55,24 @@ Do this by:
 - Adding specificity
 - Introducing a stronger emotional trigger
 
-Generate 3 improved versions.
-Each version must:
-- Be more compelling than the original
-- Not longer than necessary
-- Feel natural, not robotic
+Generate 1 improved version using the provided hook and score context.
+
+You MUST return a pure JSON object. Do not include any markdown escaping like \`\`\`json. Output ONLY the JSON object.
+
+Strict JSON format to follow:
+{
+  "type": "Mutated Winner",
+  "text": "The improved hook...",
+  "score": 95,
+  "breakdown": {
+    "curiosity": 20,
+    "specificity": 20,
+    "outcome": 20,
+    "pattern": 18,
+    "emotion": 17
+  },
+  "reason": "Why this mutated hook is better..."
+}
 `;
 
 export async function POST(req: Request) {
@@ -79,27 +80,40 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { idea, framework, action, originalHook, originalScore } = body;
 
-    // TODO: Connect to OpenAI/Anthropic SDK here
-    // Example:
-    // const response = await openai.chat.completions.create({
-    //   model: "gpt-4",
-    //   messages: [
-    //     { role: "system", content: action === 'mutate' ? MUTATION_PROMPT : SYSTEM_PROMPT },
-    //     { role: "user", content: action === 'mutate' ? \`Original: \${originalHook}, Score: \${originalScore}\` : \`INPUT: \${idea}, Focus: \${framework}\` }
-    //   ]
-    // });
-    
-    // For MVP frontend development, we simulate a successful 200 response.
-    return NextResponse.json({
-      success: true,
-      message: "AI Endpoint Structure created. Ready for LLM integration.",
-      systemPrompt: SYSTEM_PROMPT,
-      mutationPrompt: MUTATION_PROMPT
+    let systemContent = SYSTEM_PROMPT;
+    let userContent = `INPUT:\nIdea: ${idea}\nPreferred Framework: ${framework}`;
+
+    if (action === "mutate") {
+      systemContent = MUTATION_PROMPT;
+      userContent = `Original Hook:\n${JSON.stringify(originalHook)}\n\nPrior Score Breakdown:\n${JSON.stringify(originalScore)}`;
+    }
+
+    const response = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: systemContent },
+        { role: "user", content: userContent }
+      ],
+      temperature: 0.7,
     });
 
-  } catch (error) {
+    const content = response.choices[0]?.message?.content || "[]";
+    let data;
+    try {
+      data = JSON.parse(content);
+    } catch(e) {
+      data = JSON.parse(content.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim());
+    }
+
+    return NextResponse.json({
+      success: true,
+      data
+    });
+
+  } catch (error: any) {
+    console.error("Hook generation error:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to generate hooks" },
+      { success: false, error: error.message || "Failed to generate hooks" },
       { status: 500 }
     );
   }
