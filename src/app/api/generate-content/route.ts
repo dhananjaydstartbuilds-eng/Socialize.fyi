@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
 
 const SYSTEM_PROMPT = `
 You are an elite, world-class social media copywriter.
@@ -22,6 +22,7 @@ PLATFORM GUIDELINES:
 `;
 
 export async function POST(req: Request) {
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
   try {
     const body = await req.json();
     const { idea, hookText, platform } = body;

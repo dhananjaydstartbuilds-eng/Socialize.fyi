@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
 
 const SYSTEM_PROMPT = `
 🧪 Hook Generation + Scoring Prompt
@@ -76,6 +76,7 @@ Strict JSON format to follow:
 `;
 
 export async function POST(req: Request) {
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
   try {
     const body = await req.json();
     const { idea, framework, action, originalHook, originalScore } = body;
